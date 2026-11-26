@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>.cbx (!B0X Speech Codec) — LEGO The Hobbit</title>
+    <link rel="stylesheet" href="../../../style/main.css">
+</head>
+
+<body class="doc-page">
+    <nav class="breadcrumbs" aria-label="Breadcrumb"><a href="../../../index.html#home" target="_parent">Documentation</a><span>/</span><a href="../../../index.html#Formats-dat" target="_parent">Formats</a><span>/</span><a href="../../../Formats/dat/dat.html">.dat Archive</a><span>/</span>.cbx (!B0X Speech Codec)</nav>
+    <h1>.CBX (!B0X ChatterBoX Compressed Speech Audio)</h1>
+    <aside class="source-notice">
+        <p><strong>Dissected Directly:</strong> <em>BM2</em> (38), <em>Marvel 1</em> (4,717), <em>Hobbit</em> (3,866), and <em>Dimensions</em> (27,714 files).</p>
+    </aside>
+    <section class="format-summary">
+        <p class="eyebrow">LEGO The Hobbit · Voice Audio · Batman 2 through LEGO Dimensions</p>
+        <p>Proprietary high-ratio TT speech compression container (!B0X magic) storing decoded PCM sample byte length, sample rate, and packed frame stream for in-game dialogue.</p>
+        <dl>
+            <dt>Extension</dt>
+            <dd><code>.cbx</code></dd>
+            <dt>Magic Header</dt>
+            <dd><code>"!B0X"</code> (<code>0x21 0x42 0x30 0x58</code>)</dd>
+            <dt>Sample Rates</dt>
+            <dd><code>22,050</code> Hz mono speech (observed in <em>BM2</em> &amp; <em>Marvel 1</em>)</dd>
+        </dl>
+    </section>
+    <p class="callout"><strong>Cross-Generation History:</strong> This page is scoped strictly to the versions and containers observed in this game. For multi-era evolution across Nu2, NXG, DX11, and NTT, see the <a href="../../../../../../../reversing/docs/Travellers_Tales/Formats/dat/datFormats/cbx.html" target="_top">Parent LEGO Shared Specification</a>.</p>
+    <nav class="page-toc" aria-label="On this page">
+        <ul>
+            <li><a href="#overview">1. Overview &amp; Layout</a></li>
+            <li><a href="#relationships">2. Cross-Format Relationships</a></li>
+            <li><a href="#edge-cases">3. Edge Cases &amp; Unresolved Fields</a></li>
+            <li><a href="#pseudocode">4. Standalone Parser Pseudocode</a></li>
+        </ul>
+    </nav>
+    <section id="overview" class="doc-overview">
+        <h2>Binary Header Layout (Observed Across <em>BM2</em> &amp; <em>Marvel 1</em>)</h2>
+        <div class="table-scroll">
+            <table class="format-counts">
+                <caption>.cbx (!B0X) 20-Byte Header</caption>
+                <thead>
+                    <tr>
+                        <th>Offset</th>
+                        <th>Size</th>
+                        <th>Type</th>
+                        <th>Field</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>0x00</code></td>
+                        <td>4</td>
+                        <td><code>char[4]</code></td>
+                        <td><code>magic</code></td>
+                        <td><code>"!B0X"</code> (<code>0x21423058</code>).</td>
+                    </tr>
+                    <tr>
+                        <td><code>0x04</code></td>
+                        <td>4</td>
+                        <td><code>u32le</code></td>
+                        <td><code>decoded_pcm_bytes</code></td>
+                        <td>Uncompressed 16-bit PCM size in bytes (e.g. <code>0x2B48</code> = 11,080 B in <em>BM2</em>; <code>112,874</code> B in <em>Marvel 1</em>).</td>
+                    </tr>
+                    <tr>
+                        <td><code>0x08</code></td>
+                        <td>4</td>
+                        <td><code>u32le</code></td>
+                        <td><code>sample_rate</code></td>
+                        <td>Sampling rate in Hz (<code>22050</code> = <code>0x5622</code>).</td>
+                    </tr>
+                    <tr>
+                        <td><code>0x0C</code></td>
+                        <td>4</td>
+                        <td><code>u32le</code></td>
+                        <td><code>flags_or_seed</code></td>
+                        <td>Codec parameter / bitrate state word (e.g. <code>0xED95B9D8</code> / <code>0x466A5FD0</code>).</td>
+                    </tr>
+                    <tr>
+                        <td><code>0x10+</code></td>
+                        <td>var</td>
+                        <td><code>bytes</code></td>
+                        <td><code>chatterbox_bitstream</code></td>
+                        <td>Custom sub-band CELP / ChatterBoX frame packets.</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+    <section id="relationships" class="section">
+        <h2>Cross-Format Relationships &amp; Dependencies</h2>
+        <div class="relationship-flow">
+            <h3>Referenced By (Upstream Containers / Loaders)</h3>
+            <ul>
+                <li><a href="../../../Formats/dat/datFormats/cd.html"><code>.cd / .sub / .sfx</code></a> — Triggered for minifigure combat grunts and hub dialogue.</li>
+            </ul>
+            <h3>References (Downstream Assets / Sub-Formats)</h3>
+            <p><em>None documented (leaf or standalone file).</em></p>
+        </div>
+    </section>
+    <section id="edge-cases" class="section">
+        <h2>Filtering, Edge Cases &amp; Unresolved Fields</h2>
+        <ul>
+            <li><strong>Unresolved Inner DSP Transform:</strong> Header fields (decoded PCM byte size &amp; sample rate) are verified; inner ChatterBoX frame entropy/quantization decode requires reversing the <code>!B0X</code> decode loop inside <code>EBOOT.BIN</code>/<code>LEGOBatman2.exe</code>.</li>
+        </ul>
+    </section>
+    <section id="pseudocode" class="section">
+        <h2>Standalone Clean-Room Parser Pseudocode</h2>
+        <pre><code>function ParseCbxHeader(buf):
+    if buf[0:4] != b&quot;!B0X&quot;: raise NotCbx
+    pcm_sz, rate, flags = ReadU32LE3(buf, 4)
+    return {pcm_bytes: pcm_sz, sample_rate: rate, payload: buf[0x10:]}</code></pre>
+    </section>
+
+</body>
+
+</html>
